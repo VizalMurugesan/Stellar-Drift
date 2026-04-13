@@ -2,67 +2,58 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>VR Test</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <title>VR Space Survival</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body { margin:0; }
-    #startBtn {
-      position:fixed;
-      top:20px;
-      left:20px;
-      z-index:10;
-      padding:10px;
-      background:#7b2fff;
-      color:white;
-      border:none;
-    }
-  </style>
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 
 <body>
+  <a-scene background="color: black">
 
-<button id="startBtn">START</button>
+    <!-- Camera -->
+    <a-entity camera look-controls wasd-controls position="0 1.6 0">
+      <a-cursor color="white"></a-cursor>
+    </a-entity>
 
-<a-scene id="scene" embedded>
-  
-  <!-- CAMERA (IMPORTANT) -->
-  <a-camera position="0 1.6 0"></a-camera>
+    <!-- Lighting -->
+    <a-entity light="type: ambient; intensity: 0.5"></a-entity>
+    <a-entity light="type: point; intensity: 1; position="2 4 4"></a-entity>
 
-  <!-- LIGHT -->
-  <a-light type="ambient" intensity="1"></a-light>
+    <!-- Ground -->
+    <a-plane rotation="-90 0 0" width="50" height="50" color="#111"></a-plane>
 
-  <!-- SKY -->
-  <a-sky color="#222"></a-sky>
+    <!-- Stars (simple spheres) -->
+    <a-sphere position="5 5 -10" radius="0.2" color="white"></a-sphere>
+    <a-sphere position="-5 3 -8" radius="0.2" color="white"></a-sphere>
+    <a-sphere position="3 7 -12" radius="0.2" color="white"></a-sphere>
 
-  <!-- OBJECT (YOU MUST SEE THIS) -->
-  <a-box position="0 1 -3" color="red"></a-box>
+    <!-- Player Base -->
+    <a-box position="0 1 -5" color="#4CC3D9"></a-box>
 
-</a-scene>
+    <!-- Enemy -->
+    <a-sphere id="enemy" position="0 1 -10" radius="1" color="red"></a-sphere>
 
-<script>
-const btn = document.getElementById("startBtn");
-const scene = document.getElementById("scene");
+  </a-scene>
 
-btn.onclick = () => {
-  console.log("Clicked");
+  <script>
+    // Simple enemy movement
+    const enemy = document.querySelector("#enemy");
 
-  // CRITICAL FIX: wait for scene to load
-  if (!scene.hasLoaded) {
-    scene.addEventListener("loaded", startGame);
-  } else {
-    startGame();
-  }
-};
+    function animateEnemy() {
+      let z = -10;
+      setInterval(() => {
+        z += 0.05;
+        enemy.setAttribute("position", `0 1 ${z}`);
+      }, 50);
+    }
 
-function startGame() {
-  console.log("Scene loaded → starting");
-
-  // DO NOT auto enter VR (causes black screen sometimes)
-  // scene.enterVR();  <-- REMOVE THIS
-
-}
-</script>
+    window.addEventListener("load", () => {
+      console.log("Scene loaded");
+      animateEnemy();
+    });
+  </script>
 
 </body>
 </html>
