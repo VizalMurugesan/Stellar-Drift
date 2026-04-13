@@ -10,23 +10,29 @@
     if (typeof AFRAME !== 'undefined') {
       AFRAME.registerComponent('head-drift', {
       tick() {
-        if (!window.STATE || STATE.phase !== 'playing') return;
         const camera = this.el;
         if (!camera) return;
-        const rot = camera.object3D.rotation;
+        const rotation = camera.getAttribute('rotation');
         const rig = camera.parentNode;
         if (!rig) return;
-        const pos = rig.object3D.position;
-        const threshold = 0.3; // radians (~17 degrees)
-        if (Math.abs(rot.x) > threshold) {
-          if (rot.x > 0) pos.z -= 0.1; // Looking up = move forward
-          else pos.z += 0.1; // Looking down = move backward
-          pos.z = Math.max(-2, Math.min(50, pos.z));
+        const pitchThreshold = 15;
+        if (rotation.x > pitchThreshold) {
+          let pos = rig.getAttribute('position');
+          pos.z -= 0.05;
+          rig.setAttribute('position', pos);
+        } else if (rotation.x < -pitchThreshold) {
+          let pos = rig.getAttribute('position');
+          pos.z += 0.05;
+          rig.setAttribute('position', pos);
         }
-        if (Math.abs(rot.y) > threshold) {
-          if (rot.y > 0) pos.x -= 0.1; // Looking right = strafe left
-          else pos.x += 0.1; // Looking left = strafe right
-          pos.x = Math.max(-12, Math.min(12, pos.x));
+        if (rotation.y > pitchThreshold) {
+          let pos = rig.getAttribute('position');
+          pos.x -= 0.05;
+          rig.setAttribute('position', pos);
+        } else if (rotation.y < -pitchThreshold) {
+          let pos = rig.getAttribute('position');
+          pos.x += 0.05;
+          rig.setAttribute('position', pos);
         }
       }
       });
