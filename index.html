@@ -2,58 +2,99 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>VR Space Survival</title>
+  <title>VR Space Survival Mobile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <style>
+    body { margin: 0; }
+
+    /* Mobile UI button */
+    #startBtn {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 15px 25px;
+      font-size: 18px;
+      background: white;
+      border: none;
+      border-radius: 10px;
+      z-index: 999;
+    }
+  </style>
 </head>
 
 <body>
-  <a-scene background="color: black">
 
-    <!-- Camera -->
-    <a-entity camera look-controls wasd-controls position="0 1.6 0">
+<button id="startBtn">Tap to Start</button>
+
+<a-scene background="color: black">
+
+  <!-- Camera (mobile-friendly) -->
+  <a-entity id="player" position="0 1.6 0">
+    <a-camera look-controls="touchEnabled: true">
       <a-cursor color="white"></a-cursor>
-    </a-entity>
+    </a-camera>
+  </a-entity>
 
-    <!-- Lighting -->
-    <a-entity light="type: ambient; intensity: 0.5"></a-entity>
-    <a-entity light="type: point; intensity: 1; position="2 4 4"></a-entity>
+  <!-- Lights -->
+  <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+  <a-entity light="type: point; intensity: 1; position: 2 4 4"></a-entity>
 
-    <!-- Ground -->
-    <a-plane rotation="-90 0 0" width="50" height="50" color="#111"></a-plane>
+  <!-- Ground -->
+  <a-plane rotation="-90 0 0" width="50" height="50" color="#111"></a-plane>
 
-    <!-- Stars (simple spheres) -->
-    <a-sphere position="5 5 -10" radius="0.2" color="white"></a-sphere>
-    <a-sphere position="-5 3 -8" radius="0.2" color="white"></a-sphere>
-    <a-sphere position="3 7 -12" radius="0.2" color="white"></a-sphere>
+  <!-- Stars -->
+  <a-sphere position="5 5 -10" radius="0.2" color="white"></a-sphere>
+  <a-sphere position="-5 3 -8" radius="0.2" color="white"></a-sphere>
+  <a-sphere position="3 7 -12" radius="0.2" color="white"></a-sphere>
 
-    <!-- Player Base -->
-    <a-box position="0 1 -5" color="#4CC3D9"></a-box>
+  <!-- Base -->
+  <a-box position="0 1 -5" color="#4CC3D9"></a-box>
 
-    <!-- Enemy -->
-    <a-sphere id="enemy" position="0 1 -10" radius="1" color="red"></a-sphere>
+  <!-- Enemy -->
+  <a-sphere id="enemy" position="0 1 -10" radius="1" color="red"></a-sphere>
 
-  </a-scene>
+</a-scene>
 
-  <script>
-    // Simple enemy movement
-    const enemy = document.querySelector("#enemy");
+<script>
+const enemy = document.querySelector("#enemy");
+const player = document.querySelector("#player");
+const startBtn = document.querySelector("#startBtn");
 
-    function animateEnemy() {
-      let z = -10;
-      setInterval(() => {
-        z += 0.05;
-        enemy.setAttribute("position", `0 1 ${z}`);
-      }, 50);
-    }
+let started = false;
 
-    window.addEventListener("load", () => {
-      console.log("Scene loaded");
-      animateEnemy();
-    });
-  </script>
+// Tap to start (REQUIRED for mobile)
+startBtn.addEventListener("click", () => {
+  startBtn.style.display = "none";
+  started = true;
+});
+
+// Simple forward movement (tap anywhere to move)
+document.body.addEventListener("touchstart", () => {
+  if (!started) return;
+
+  let pos = player.getAttribute("position");
+  pos.z -= 1;
+  player.setAttribute("position", pos);
+});
+
+// Enemy movement
+function animateEnemy() {
+  let z = -10;
+  setInterval(() => {
+    z += 0.05;
+    enemy.setAttribute("position", `0 1 ${z}`);
+  }, 50);
+}
+
+window.addEventListener("load", () => {
+  animateEnemy();
+});
+</script>
 
 </body>
 </html>
