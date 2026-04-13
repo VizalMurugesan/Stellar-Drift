@@ -1,141 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VR Space Survival</title>
+  <meta charset="utf-8">
+  <title>VR Test</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
-
-<style>
-body { margin:0; overflow:hidden; font-family:monospace; background:black; }
-
-/* UI */
-#ui {
-  position:fixed;
-  top:10px;
-  left:10px;
-  color:#00f5ff;
-  z-index:10;
-}
-
-button {
-  padding:10px 20px;
-  background:#7b2fff;
-  color:white;
-  border:none;
-  cursor:pointer;
-}
-</style>
+  <style>
+    body { margin:0; }
+    #startBtn {
+      position:fixed;
+      top:20px;
+      left:20px;
+      z-index:10;
+      padding:10px;
+      background:#7b2fff;
+      color:white;
+      border:none;
+    }
+  </style>
 </head>
 
 <body>
 
-<div id="ui">
-  <div>Score: <span id="score">0</span></div>
-  <button id="startBtn">Start Game</button>
-</div>
+<button id="startBtn">START</button>
 
-<a-scene id="scene" style="display:none">
+<a-scene id="scene" embedded>
+  
+  <!-- CAMERA (IMPORTANT) -->
+  <a-camera position="0 1.6 0"></a-camera>
 
-  <!-- Camera -->
-  <a-entity id="rig">
-    <a-camera id="cam" position="0 1.6 0">
-      <!-- Gaze cursor -->
-      <a-entity cursor="fuse:true; fuseTimeout:1000"
-                position="0 0 -1"
-                geometry="primitive:ring; radiusInner:0.01; radiusOuter:0.02"
-                material="color:#00f5ff">
-      </a-entity>
-    </a-camera>
-  </a-entity>
-
-  <!-- Lights -->
+  <!-- LIGHT -->
   <a-light type="ambient" intensity="1"></a-light>
 
-  <!-- Space background -->
-  <a-sky color="#000011"></a-sky>
+  <!-- SKY -->
+  <a-sky color="#222"></a-sky>
 
-  <!-- Containers -->
-  <a-entity id="asteroids"></a-entity>
+  <!-- OBJECT (YOU MUST SEE THIS) -->
+  <a-box position="0 1 -3" color="red"></a-box>
 
 </a-scene>
 
 <script>
-let score = 0;
-let playing = false;
-let asteroids = [];
-
-const scoreEl = document.getElementById("score");
+const btn = document.getElementById("startBtn");
 const scene = document.getElementById("scene");
 
-/* START GAME */
-document.getElementById("startBtn").onclick = () => {
-  document.getElementById("ui").style.display = "none";
-  scene.style.display = "block";
-  scene.style.pointerEvents = "auto";
-  playing = true;
+btn.onclick = () => {
+  console.log("Clicked");
 
-  spawnLoop();
-  gameLoop();
+  // CRITICAL FIX: wait for scene to load
+  if (!scene.hasLoaded) {
+    scene.addEventListener("loaded", startGame);
+  } else {
+    startGame();
+  }
 };
 
-/* SPAWN ASTEROIDS */
-function spawnAsteroid() {
-  const container = document.getElementById("asteroids");
+function startGame() {
+  console.log("Scene loaded → starting");
 
-  const a = document.createElement("a-sphere");
-  const dist = 20;
+  // DO NOT auto enter VR (causes black screen sometimes)
+  // scene.enterVR();  <-- REMOVE THIS
 
-  const x = (Math.random()-0.5)*20;
-  const y = (Math.random()-0.5)*10;
-  const z = -dist;
-
-  a.setAttribute("position", `${x} ${y} ${z}`);
-  a.setAttribute("radius", Math.random()*1 + 0.5);
-  a.setAttribute("color", "#888");
-
-  container.appendChild(a);
-
-  asteroids.push({
-    el: a,
-    x, y, z,
-    speed: 0.05 + Math.random()*0.05
-  });
-}
-
-function spawnLoop() {
-  if (!playing) return;
-  spawnAsteroid();
-  setTimeout(spawnLoop, 1000);
-}
-
-/* GAME LOOP */
-function gameLoop() {
-  if (!playing) return;
-
-  for (let i = asteroids.length-1; i >= 0; i--) {
-    let a = asteroids[i];
-
-    a.z += a.speed * 5;
-    a.el.setAttribute("position", `${a.x} ${a.y} ${a.z}`);
-
-    // collision with player
-    if (a.z > -1) {
-      alert("Game Over! Score: " + score);
-      location.reload();
-      return;
-    }
-
-    // passed safely → score
-    if (a.z > -5 && !a.passed) {
-      a.passed = true;
-      score++;
-      scoreEl.textContent = score;
-    }
-  }
-
-  requestAnimationFrame(gameLoop);
 }
 </script>
 
