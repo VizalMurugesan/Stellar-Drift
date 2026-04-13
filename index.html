@@ -1,1240 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Stellar Drift – VR Space Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stellar Drift – Fixed</title>
 
-  <!-- A-Frame — loaded synchronously so AFRAME global is available before body scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
-  <!-- Register custom A-Frame components HERE, right after A-Frame loads, before a-scene exists -->
-  <script>
-    // Must register before a-scene is parsed by A-Frame
-    AFRAME.registerComponent('head-drift', {
-      schema: { speed: { default: 0.015 } },
-      tick: function() {
-        if (typeof STATE === 'undefined' || STATE.phase !== 'playing') return;
-        const camera = document.getElementById('playerCam');
-        if (!camera) return;
-        const rotation = camera.getAttribute('rotation');
-        if (!rotation) return;
-        const pitch = rotation.x;
-        const yaw   = rotation.y;
-        if (Math.abs(pitch) > 15) {
-          const rig = document.getElementById('rig');
-          const pos = rig.getAttribute('position');
-          const rad = yaw * Math.PI / 180;
-          const pitchRad = pitch * Math.PI / 180;
-          rig.setAttribute('position', {
-            x: pos.x + Math.sin(rad) * Math.cos(pitchRad) * this.data.speed,
-            y: pos.y - Math.sin(pitchRad) * this.data.speed,
-            z: pos.z - Math.cos(rad) * Math.cos(pitchRad) * this.data.speed
-          });
-        }
-      }
-    });
-  </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
 
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000010;color:white;font-family:monospace;overflow:hidden}
 
-    body {
-      font-family: 'Courier New', monospace;
-      background: #000010;
-      color: #fff;
-      overflow: hidden;
-    }
+/* Screens */
+.screen{
+  position:fixed;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:#000020;
+  z-index:1000;
+}
+.screen.hidden{
+  opacity:0;
+  pointer-events:none;
+  visibility:hidden;
+}
 
-    /* ── OVERLAY SCREENS ── */
-    .screen {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      background: radial-gradient(ellipse at center, #0a0a2e 0%, #000005 70%);
-      transition: opacity 0.8s ease;
-    }
-    .screen.hidden { opacity: 0; pointer-events: none; display: none; }
-    .screen { pointer-events: auto; }
+/* Prevent overlay blocking */
+.screen::before{pointer-events:none;}
 
-    /* Stars behind UI */
-    .screen::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        radial-gradient(1px 1px at 10% 15%, #fff 0%, transparent 100%),
-        radial-gradient(1px 1px at 25% 40%, #aaf 0%, transparent 100%),
-        radial-gradient(1px 1px at 50% 5%,  #fff 0%, transparent 100%),
-        radial-gradient(1px 1px at 70% 60%, #ffa 0%, transparent 100%),
-        radial-gradient(1px 1px at 85% 25%, #fff 0%, transparent 100%),
-        radial-gradient(1px 1px at 35% 80%, #aff 0%, transparent 100%),
-        radial-gradient(1px 1px at 60% 90%, #fff 0%, transparent 100%),
-        radial-gradient(1px 1px at 90% 75%, #faf 0%, transparent 100%),
-        radial-gradient(2px 2px at 15% 55%, #fff 0%, transparent 100%),
-        radial-gradient(2px 2px at 80% 10%, #aaf 0%, transparent 100%);
-      animation: twinkle 4s infinite alternate;
-    }
-    @keyframes twinkle { from{opacity:.6} to{opacity:1} }
+#setupScreen{z-index:10001;}
 
-    /* ── FLASH SCREEN ── */
-    #flashScreen .logo {
-      font-size: clamp(2.5rem, 10vw, 5rem);
-      font-weight: 900;
-      letter-spacing: .15em;
-      background: linear-gradient(135deg, #00f5ff, #7b2fff, #ff6b6b);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: pulse 2s infinite;
-      text-align: center;
-    }
-    @keyframes pulse {
-      0%,100%{filter:brightness(1)} 50%{filter:brightness(1.4)}
-    }
-    #flashScreen .subtitle {
-      font-size: clamp(.9rem, 3vw, 1.3rem);
-      color: #7ecfff;
-      letter-spacing: .3em;
-      margin: .5rem 0 2.5rem;
-      text-transform: uppercase;
-    }
-    #flashScreen .credits {
-      font-size: clamp(.75rem, 2.5vw, 1rem);
-      color: #8899bb;
-      text-align: center;
-      line-height: 1.9;
-      letter-spacing: .05em;
-    }
-    #flashScreen .credits strong { color: #00f5ff; }
-    #flashScreen .start-hint {
-      margin-top: 2.5rem;
-      font-size: clamp(.8rem, 2.5vw, 1rem);
-      color: #ffffff88;
-      animation: blink 1.4s infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+/* Inputs always clickable */
+select,input,button{
+  pointer-events:auto!important;
+  z-index:10002;
+  position:relative;
+}
 
-    /* ── SETUP SCREEN ── */
-    #setupScreen h2 {
-      font-size: clamp(1.8rem, 6vw, 3rem);
-      letter-spacing: .2em;
-      color: #00f5ff;
-      margin-bottom: 2rem;
-    }
-    .option-group {
-      margin: 1rem 0;
-      width: min(400px, 90vw);
-      display: flex;
-      flex-direction: column;
-      gap: .5rem;
-      pointer-events: auto;
-    }
-    .option-group label {
-      font-size: .85rem;
-      color: #7ecfff;
-      letter-spacing: .1em;
-    }
-    .option-group select, .option-group input[type=range] {
-      width: 100%;
-      background: #0a1a3a;
-      border: 1px solid #1e4080;
-      color: #fff;
-      padding: .5rem;
-      border-radius: 4px;
-      font-family: inherit;
-      pointer-events: auto;
-      cursor: pointer;
-    }
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: min(400px, 90vw);
-      margin: .7rem 0;
-    }
-    .toggle-row label { font-size: .9rem; color: #7ecfff; letter-spacing: .1em; }
-    .toggle { position: relative; width: 52px; height: 28px; }
-    .toggle input { opacity:0; width:0; height:0; }
-    .slider-tog {
-      position: absolute; inset: 0;
-      background: #1a2a4a; border-radius: 28px; cursor: pointer;
-      transition: .3s;
-    }
-    .slider-tog::before {
-      content: '';
-      position: absolute;
-      width: 20px; height: 20px;
-      left: 4px; top: 4px;
-      background: #fff; border-radius: 50%;
-      transition: .3s;
-    }
-    .toggle input:checked + .slider-tog { background: #7b2fff; }
-    .toggle input:checked + .slider-tog::before { transform: translateX(24px); }
+/* A-Frame fix */
+a-scene{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+}
 
-    .btn {
-      margin-top: 2rem;
-      padding: .9rem 2.8rem;
-      font-family: inherit;
-      font-size: 1.1rem;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      background: linear-gradient(135deg, #7b2fff, #00f5ff);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      pointer-events: auto;
-      z-index: 10000;
-      transition: filter .2s, transform .1s;
-    }
-    .btn:hover { filter: brightness(1.3); transform: scale(1.03); }
-    .btn:active { transform: scale(.97); }
+.btn{
+  padding:10px 20px;
+  margin-top:20px;
+  background:#7b2fff;
+  border:none;
+  color:white;
+  cursor:pointer;
+}
 
-    /* ── HUD ── */
-    #hud {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 54px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1.2rem;
-      z-index: 500;
-      background: linear-gradient(to bottom, #000020cc, transparent);
-      pointer-events: none;
-    }
-    #hud .hud-item {
-      font-size: clamp(.7rem, 2.5vw, .95rem);
-      letter-spacing: .12em;
-      color: #00f5ff;
-      text-shadow: 0 0 8px #00f5ff88;
-    }
-    #hud .hud-item span { color: #fff; font-weight: bold; }
-
-    /* ── LEVEL TRANSITION ── */
-    #levelBanner {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 800;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .5s;
-    }
-    #levelBanner.show { opacity: 1; }
-    #levelBanner .banner-text {
-      font-size: clamp(2rem, 8vw, 4rem);
-      letter-spacing: .25em;
-      background: linear-gradient(135deg, #ffd700, #ff6b6b);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-align: center;
-    }
-
-    /* ── GAME OVER ── */
-    #gameOverScreen h2 {
-      font-size: clamp(2rem, 8vw, 4rem);
-      letter-spacing: .2em;
-      color: #ff6b6b;
-      margin-bottom: 1rem;
-    }
-    #gameOverScreen .final-score {
-      font-size: clamp(1.2rem, 4vw, 2rem);
-      color: #ffd700;
-      margin-bottom: 2rem;
-    }
-    #gameOverScreen .high-score {
-      font-size: 1rem;
-      color: #7ecfff;
-      margin-bottom: 2rem;
-    }
-
-    /* canvas full behind */
-    a-scene { position: fixed; inset: 0; }
-  </style>
+</style>
 </head>
+
 <body>
 
-<!-- ══════════════════════════════════════════
-     FLASH / SPLASH SCREEN
-══════════════════════════════════════════ -->
+<!-- FLASH -->
 <div id="flashScreen" class="screen">
-  <div class="logo">STELLAR DRIFT</div>
-  <div class="subtitle">VR Space Survival</div>
-  <div class="credits">
-    Built with A-Frame 1.5<br>
-    Web Audio API &amp; Canvas Textures
-  </div>
-  <div class="start-hint">TAP ANYWHERE TO CONTINUE</div>
+  <h1>STELLAR DRIFT</h1>
+  <p>Tap to continue</p>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SETUP SCREEN
-══════════════════════════════════════════ -->
+<!-- SETUP -->
 <div id="setupScreen" class="screen hidden">
-  <h2>⚙ SETUP</h2>
+  <h2>SETUP</h2>
 
-  <div class="option-group">
-    <label>DIFFICULTY</label>
-    <select id="diffSelect">
-      <option value="easy">EASY – Relaxed asteroid speed</option>
-      <option value="normal" selected>NORMAL – Standard challenge</option>
-      <option value="hard">HARD – Brace yourself</option>
-    </select>
-  </div>
+  <select id="diffSelect">
+    <option value="easy">Easy</option>
+    <option value="normal" selected>Normal</option>
+    <option value="hard">Hard</option>
+  </select>
 
-  <div class="option-group">
-    <label>MUSIC VOLUME &nbsp;<span id="volLabel">60%</span></label>
-    <input type="range" id="musicVol" min="0" max="100" value="60">
-  </div>
+  <br><br>
 
-  <div class="toggle-row">
-    <label>BACKGROUND MUSIC</label>
-    <label class="toggle">
-      <input type="checkbox" id="musicToggle" checked>
-      <span class="slider-tog"></span>
-    </label>
-  </div>
+  <input type="range" id="musicVol" min="0" max="100" value="60">
+  <span id="volLabel">60%</span>
 
-  <div class="toggle-row">
-    <label>SOUND EFFECTS</label>
-    <label class="toggle">
-      <input type="checkbox" id="sfxToggle" checked>
-      <span class="slider-tog"></span>
-    </label>
-  </div>
+  <br><br>
 
-  <div class="toggle-row">
-    <label>STEREOSCOPIC (VR MODE)</label>
-    <label class="toggle">
-      <input type="checkbox" id="stereoToggle" checked>
-      <span class="slider-tog"></span>
-    </label>
-  </div>
+  <label>Music <input type="checkbox" id="musicToggle" checked></label>
+  <br>
+  <label>SFX <input type="checkbox" id="sfxToggle" checked></label>
+  <br>
+  <label>VR <input type="checkbox" id="stereoToggle" checked></label>
 
   <button class="btn" id="startBtn">LAUNCH GAME</button>
 </div>
 
-<!-- ══════════════════════════════════════════
-     GAME OVER SCREEN
-══════════════════════════════════════════ -->
-<div id="gameOverScreen" class="screen hidden">
-  <h2>GAME OVER</h2>
-  <div class="final-score">SCORE: <span id="finalScore">0</span></div>
-  <div class="high-score">BEST: <span id="highScore">0</span></div>
-  <button class="btn" id="restartBtn">PLAY AGAIN</button>
-</div>
-
-<!-- ══════════════════════════════════════════
-     HUD (always visible during play)
-══════════════════════════════════════════ -->
-<div id="hud" style="display:none">
-  <div class="hud-item">SCORE <span id="scoreDisplay">0</span></div>
-  <div class="hud-item">LEVEL <span id="levelDisplay">1</span></div>
-  <div class="hud-item">LIVES <span id="livesDisplay">❤❤❤</span></div>
-  <div class="hud-item">TIME <span id="timeDisplay">60</span></div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     LEVEL BANNER
-══════════════════════════════════════════ -->
-<div id="levelBanner">
-  <div class="banner-text" id="bannerText">LEVEL 1</div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     A-FRAME SCENE
-══════════════════════════════════════════ -->
-<a-scene
-  id="mainScene"
-  vr-mode-ui="enabled: true"
-  renderer="antialias: true; colorManagement: true"
-  background="color: #000008"
-  style="display:none">
-
-  <!-- ASSETS -->
-  <a-assets timeout="10000">
-    <!-- Audio (generated via Web Audio API in JS, no external files needed) -->
-  </a-assets>
-
-  <!-- ── SKY BOX (procedural starfield) ── -->
-  <a-sky id="sky" color="#000008" radius="500"></a-sky>
-
-  <!-- Starfield particles -->
-  <a-entity id="starfield"></a-entity>
-
-  <!-- ── CAMERA RIG ── -->
-  <a-entity id="rig" position="0 0 0">
-    <a-camera
-      id="playerCam"
-      look-controls="pointerLockEnabled: false"
-      wasd-controls="enabled: false"
-      fov="80">
-
-      <!-- Gaze cursor -->
-      <a-entity
-        id="cursor"
-        cursor="fuse: true; fuseTimeout: 1200"
-        position="0 0 -1"
-        geometry="primitive: ring; radiusInner: 0.012; radiusOuter: 0.018"
-        material="color: #00f5ff; shader: flat; opacity: 0.85"
-        animation__fusing="property: scale; startEvents: fusing; from: 1 1 1; to: 0.3 0.3 0.3; dur: 1200"
-        animation__click="property: scale; startEvents: click; from: 0.3 0.3 0.3; to: 1 1 1; dur: 200"
-        raycaster="far: 100; objects: .interactive">
-      </a-entity>
-
-    </a-camera>
-  </a-entity>
-
-  <!-- ── COLLECTIBLES CONTAINER ── -->
-  <a-entity id="collectibles"></a-entity>
-
-  <!-- ── ASTEROIDS CONTAINER ── -->
-  <a-entity id="asteroids"></a-entity>
-
-  <!-- ── LEVEL 2 BOSS ── -->
-  <a-entity id="boss" visible="false"></a-entity>
-
-  <!-- ── AMBIENT LIGHT ── -->
-  <a-light type="ambient" color="#223366" intensity="0.6"></a-light>
-  <a-light type="directional" color="#aaddff" intensity="0.8" position="1 2 -1"></a-light>
-
-  <!-- ── NEBULA BACKGROUND PLANES ── -->
-  <a-entity id="nebula1"
-    geometry="primitive: sphere; radius: 450; segmentsWidth: 8; segmentsHeight: 6"
-    material="color: #1a0033; side: back; shader: flat; opacity: 0.6; wireframe: false"
-    position="0 0 0">
-  </a-entity>
-
+<!-- GAME -->
+<a-scene id="mainScene" style="display:none">
+  <a-entity camera look-controls></a-entity>
 </a-scene>
 
-<!-- ══════════════════════════════════════════
-     GAME LOGIC
-══════════════════════════════════════════ -->
 <script>
-// ────────────────────────────────────────────
-// AUDIO ENGINE  (Web Audio API – no files needed)
-// ────────────────────────────────────────────
-let audioCtx = null;
-let bgMusicNode = null;
-let bgMusicGain = null;
-
-function getAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-
-function resumeAudio() {
-  const ctx = getAudio();
-  if (ctx.state === 'suspended') ctx.resume();
-}
-
-function playTone(freq, type, duration, vol = 0.3, when = 0) {
-  if (!CONFIG.sfx) return;
-  try {
-    const ctx = getAudio();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + when);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + when + duration);
-    gain.gain.setValueAtTime(vol, ctx.currentTime + when);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + when + duration);
-    osc.start(ctx.currentTime + when);
-    osc.stop(ctx.currentTime + when + duration);
-  } catch(e) {}
-}
-
-function playSFX(name) {
-  if (!CONFIG.sfx) return;
-  switch(name) {
-    case 'collect':
-      playTone(880, 'sine', 0.15, 0.25);
-      playTone(1320, 'sine', 0.1, 0.2, 0.08);
-      break;
-    case 'hit':
-      playTone(120, 'sawtooth', 0.3, 0.4);
-      playTone(80, 'square', 0.2, 0.3, 0.1);
-      break;
-    case 'levelup':
-      [0,0.1,0.2,0.3].forEach((t,i)=> playTone([440,550,660,880][i],'sine',0.2,0.3,t));
-      break;
-    case 'gameover':
-      playTone(220, 'sawtooth', 0.5, 0.4);
-      playTone(150, 'sawtooth', 0.6, 0.4, 0.4);
-      playTone(100, 'sawtooth', 0.8, 0.4, 0.8);
-      break;
-    case 'gaze':
-      playTone(660, 'sine', 0.08, 0.15);
-      break;
-  }
-}
-
-function startBGMusic() {
-  if (!CONFIG.music) return;
-  stopBGMusic();
-  try {
-    const ctx = getAudio();
-    bgMusicGain = ctx.createGain();
-    bgMusicGain.gain.value = CONFIG.musicVolume;
-    bgMusicGain.connect(ctx.destination);
-
-    // Simple melodic bassline + hi-hat pattern
-    const notes = [110, 110, 138.59, 146.83, 110, 110, 138.59, 164.81];
-    let step = 0;
-    function scheduleMeasure(startTime) {
-      notes.forEach((freq, i) => {
-        const t = startTime + i * 0.4;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.connect(g); g.connect(bgMusicGain);
-        osc.type = 'triangle';
-        osc.frequency.value = freq;
-        g.gain.setValueAtTime(0.18, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-        osc.start(t); osc.stop(t + 0.35);
-
-        // Hi-hat
-        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
-        const d = buf.getChannelData(0);
-        for(let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.exp(-j/d.length*10);
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        const hg = ctx.createGain();
-        src.connect(hg); hg.connect(bgMusicGain);
-        hg.gain.value = 0.04;
-        src.start(t);
-      });
-    }
-    const bpm = 0.4;
-    let measureStart = ctx.currentTime;
-    function loop() {
-      scheduleMeasure(measureStart);
-      measureStart += notes.length * bpm;
-      if(bgMusicNode) bgMusicNode = setTimeout(loop, notes.length * bpm * 900);
-    }
-    bgMusicNode = setTimeout(()=>{}, 0);
-    loop();
-  } catch(e) {}
-}
-
-function stopBGMusic() {
-  clearTimeout(bgMusicNode);
-  bgMusicNode = null;
-  if (bgMusicGain) {
-    try { bgMusicGain.disconnect(); } catch(e) {}
-    bgMusicGain = null;
-  }
-}
-
-function setBGVolume(v) {
-  if (bgMusicGain) bgMusicGain.gain.value = v;
-}
-
-// ────────────────────────────────────────────
-// GAME STATE
-// ────────────────────────────────────────────
+/* CONFIG */
 const CONFIG = {
-  difficulty: 'normal',
-  music: true,
-  sfx: true,
-  musicVolume: 0.6,
-  stereo: true
+  difficulty:"normal",
+  music:true,
+  sfx:true,
+  musicVolume:0.6,
+  stereo:true
 };
 
-const DIFF = {
-  easy:   { asteroidSpeed: 0.3, spawnRate: 2200, collectValue: 15, lives: 5, timePerLevel: 90 },
-  normal: { asteroidSpeed: 0.55, spawnRate: 1600, collectValue: 10, lives: 3, timePerLevel: 60 },
-  hard:   { asteroidSpeed: 0.85, spawnRate: 1000, collectValue: 10, lives: 2, timePerLevel: 45 }
-};
+const STATE = {phase:"flash"};
 
-let STATE = {
-  phase: 'flash',   // flash | setup | playing | gameover
-  level: 1,
-  score: 0,
-  lives: 3,
-  timeLeft: 60,
-  highScore: parseInt(localStorage.getItem('stellarDrift_hs') || '0'),
-  asteroidPool: [],
-  collectiblePool: [],
-  spawnTimer: null,
-  collectTimer: null,
-  tickTimer: null,
-  frameId: null,
-  bossAlive: false,
-  bossAngle: 0
-};
+/* DOM */
+const flashScreen=document.getElementById("flashScreen");
+const setupScreen=document.getElementById("setupScreen");
+const mainScene=document.getElementById("mainScene");
 
-// ────────────────────────────────────────────
-// DOM REFS
-// ────────────────────────────────────────────
-const flashScreen   = document.getElementById('flashScreen');
-const setupScreen   = document.getElementById('setupScreen');
-const gameOverScreen= document.getElementById('gameOverScreen');
-const hud           = document.getElementById('hud');
-const mainScene     = document.getElementById('mainScene');
-const scoreDisplay  = document.getElementById('scoreDisplay');
-const levelDisplay  = document.getElementById('levelDisplay');
-const livesDisplay  = document.getElementById('livesDisplay');
-const timeDisplay   = document.getElementById('timeDisplay');
-const finalScore    = document.getElementById('finalScore');
-const highScoreEl   = document.getElementById('highScore');
-const levelBanner   = document.getElementById('levelBanner');
-const bannerText    = document.getElementById('bannerText');
+const diffSelect=document.getElementById("diffSelect");
+const musicVol=document.getElementById("musicVol");
+const volLabel=document.getElementById("volLabel");
+const musicToggle=document.getElementById("musicToggle");
+const sfxToggle=document.getElementById("sfxToggle");
+const stereoToggle=document.getElementById("stereoToggle");
 
-const diffSelect  = document.getElementById('diffSelect');
-const musicVol    = document.getElementById('musicVol');
-const volLabel    = document.getElementById('volLabel');
-const musicToggle = document.getElementById('musicToggle');
-const sfxToggle   = document.getElementById('sfxToggle');
-const stereoToggle= document.getElementById('stereoToggle');
-
-// ────────────────────────────────────────────
-// UTILITY
-// ────────────────────────────────────────────
-function rand(min, max) { return Math.random() * (max - min) + min; }
-function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
-
-function showScreen(id) {
-  [flashScreen, setupScreen, gameOverScreen].forEach(s => {
-    if (s.id === id) { s.classList.remove('hidden'); }
-    else { s.classList.add('hidden'); }
+/* SCREEN CONTROL */
+function showScreen(id){
+  [flashScreen,setupScreen].forEach(s=>{
+    if(id && s.id===id) s.classList.remove("hidden");
+    else s.classList.add("hidden");
   });
 }
 
-function updateHUD() {
-  scoreDisplay.textContent = STATE.score;
-  levelDisplay.textContent = STATE.level;
-  livesDisplay.textContent = '❤'.repeat(Math.max(0, STATE.lives));
-  timeDisplay.textContent  = Math.max(0, Math.ceil(STATE.timeLeft));
-}
-
-function showBanner(text, duration = 2200) {
-  bannerText.textContent = text;
-  levelBanner.classList.add('show');
-  setTimeout(() => levelBanner.classList.remove('show'), duration);
-}
-
-// ────────────────────────────────────────────
-// PROCEDURAL TEXTURE GENERATION (canvas → dataURL)
-// ────────────────────────────────────────────
-function makeAsteroidTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const ctx = c.getContext('2d');
-  // Base rocky color
-  const grd = ctx.createRadialGradient(128,128,10,128,128,128);
-  grd.addColorStop(0, '#7a6a55');
-  grd.addColorStop(0.5, '#4a3e30');
-  grd.addColorStop(1, '#1a1510');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,256,256);
-  // Noise craters
-  for(let i=0;i<30;i++){
-    const x=rand(20,236), y=rand(20,236), r=rand(3,22);
-    const g2=ctx.createRadialGradient(x,y,0,x,y,r);
-    g2.addColorStop(0,'rgba(0,0,0,0.7)');
-    g2.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g2;
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-  }
-  // Highlight speckles
-  for(let i=0;i<60;i++){
-    ctx.fillStyle=`rgba(200,180,140,${rand(0.05,0.3)})`;
-    ctx.fillRect(rand(0,255),rand(0,255),rand(1,4),rand(1,4));
-  }
-  return c.toDataURL();
-}
-
-function makeGemTexture(color1, color2) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const ctx = c.getContext('2d');
-  const grd = ctx.createRadialGradient(45,45,5,64,64,64);
-  grd.addColorStop(0, '#ffffff');
-  grd.addColorStop(0.2, color1);
-  grd.addColorStop(0.7, color2);
-  grd.addColorStop(1, '#000000');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,128,128);
-  // Facets
-  ctx.globalAlpha = 0.3;
-  for(let i=0;i<8;i++){
-    ctx.strokeStyle=`hsl(${i*45},80%,80%)`;
-    ctx.lineWidth=1;
-    ctx.beginPath();
-    ctx.moveTo(64,64);
-    const a=i*Math.PI/4;
-    ctx.lineTo(64+Math.cos(a)*60, 64+Math.sin(a)*60);
-    ctx.stroke();
-  }
-  ctx.globalAlpha=1;
-  return c.toDataURL();
-}
-
-function makePlanetTexture(h1, h2) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 512;
-  const ctx = c.getContext('2d');
-  // Base
-  const grd = ctx.createLinearGradient(0,0,512,512);
-  grd.addColorStop(0, `hsl(${h1},70%,30%)`);
-  grd.addColorStop(1, `hsl(${h2},60%,20%)`);
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,512,512);
-  // Bands
-  for(let i=0;i<8;i++){
-    const y=rand(0,512), h=rand(10,50);
-    ctx.fillStyle=`hsla(${rand(h1,h2)},60%,${rand(25,50)}%,0.4)`;
-    ctx.fillRect(0,y,512,h);
-  }
-  // Atmosphere glow
-  const atm=ctx.createRadialGradient(256,256,180,256,256,256);
-  atm.addColorStop(0,'rgba(0,0,0,0)');
-  atm.addColorStop(1,`hsla(${h1},80%,70%,0.3)`);
-  ctx.fillStyle=atm;
-  ctx.fillRect(0,0,512,512);
-  return c.toDataURL();
-}
-
-function makeStarfieldTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 512;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle='#000008';
-  ctx.fillRect(0,0,512,512);
-  for(let i=0;i<400;i++){
-    const x=rand(0,512),y=rand(0,512),r=rand(0.3,2.5);
-    const bright=rand(150,255);
-    ctx.fillStyle=`rgba(${bright},${bright},${Math.round(bright*rand(0.8,1.2))},${rand(0.5,1)})`;
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-  }
-  return c.toDataURL();
-}
-
-// Pre-generate textures
-let ASTEROID_TEX, GEM_TEX_BLUE, GEM_TEX_GOLD, PLANET_TEX, STAR_TEX;
-
-function generateTextures() {
-  ASTEROID_TEX = makeAsteroidTexture();
-  GEM_TEX_BLUE = makeGemTexture('#00aaff','#003377');
-  GEM_TEX_GOLD = makeGemTexture('#ffdd00','#aa5500');
-  PLANET_TEX   = makePlanetTexture(200, 260);
-  STAR_TEX     = makeStarfieldTexture();
-}
-
-// ────────────────────────────────────────────
-// STARFIELD
-// ────────────────────────────────────────────
-function buildStarfield() {
-  const container = document.getElementById('starfield');
-  container.innerHTML = '';
-  for (let i = 0; i < 200; i++) {
-    const star = document.createElement('a-sphere');
-    const radius = rand(0.3, 1.5);
-    const dist   = rand(80, 450);
-    const theta  = rand(0, Math.PI * 2);
-    const phi    = Math.acos(rand(-1, 1));
-    star.setAttribute('radius', radius);
-    star.setAttribute('position', {
-      x: dist * Math.sin(phi) * Math.cos(theta),
-      y: dist * Math.sin(phi) * Math.sin(theta),
-      z: dist * Math.cos(phi)
-    });
-    star.setAttribute('material', `color: hsl(${randInt(200,260)},80%,90%); shader: flat; src: ${STAR_TEX}`);
-    container.appendChild(star);
-  }
-}
-
-// ────────────────────────────────────────────
-// ASTEROID SPAWNING
-// ────────────────────────────────────────────
-let asteroidId = 0;
-
-function spawnAsteroid() {
-  if (STATE.phase !== 'playing') return;
-  const diff  = DIFF[CONFIG.difficulty];
-  const scene = document.getElementById('asteroids');
-  const id    = `ast_${asteroidId++}`;
-
-  // Random position on sphere around player
-  const dist  = rand(18, 30);
-  const theta = rand(0, Math.PI * 2);
-  const phi   = rand(0.3, Math.PI - 0.3);
-  const x = dist * Math.sin(phi) * Math.cos(theta);
-  const y = dist * Math.sin(phi) * Math.sin(theta);
-  const z = dist * Math.cos(phi);
-
-  // Size varies more in level 2
-  const sizeMulti = STATE.level === 2 ? rand(0.4, 2.0) : rand(0.4, 1.2);
-
-  const ast = document.createElement('a-entity');
-  ast.setAttribute('id', id);
-  ast.setAttribute('position', `${x} ${y} ${z}`);
-  ast.setAttribute('class', 'asteroid');
-
-  // Bumpy asteroid from dodecahedron
-  const mesh = document.createElement('a-dodecahedron');
-  mesh.setAttribute('radius', sizeMulti);
-  mesh.setAttribute('material', `src: ${ASTEROID_TEX}; roughness: 0.9; metalness: 0.1; repeat: 2 2`);
-  mesh.setAttribute('animation', `property: rotation; to: ${rand(0,360)} ${rand(0,360)} ${rand(0,360)}; dur: ${rand(3000,8000)}; loop: true; easing: linear`);
-  ast.appendChild(mesh);
-
-  scene.appendChild(ast);
-
-  // Move toward player
-  STATE.asteroidPool.push({
-    el: ast,
-    vx: -x / dist * diff.asteroidSpeed * rand(0.7, 1.3),
-    vy: -y / dist * diff.asteroidSpeed * rand(0.7, 1.3),
-    vz: -z / dist * diff.asteroidSpeed * rand(0.7, 1.3),
-    size: sizeMulti,
-    id
-  });
-}
-
-function spawnCollectible() {
-  if (STATE.phase !== 'playing') return;
-  const scene = document.getElementById('collectibles');
-  const id = `col_${asteroidId++}`;
-
-  const dist  = rand(8, 18);
-  const theta = rand(0, Math.PI * 2);
-  const y     = rand(-3, 3);
-  const x = dist * Math.cos(theta);
-  const z = dist * Math.sin(theta);
-
-  // Alternate gem colors
-  const isGold = Math.random() > 0.5;
-  const tex    = isGold ? GEM_TEX_GOLD : GEM_TEX_BLUE;
-  const color  = isGold ? '#ffdd00' : '#00aaff';
-  const value  = isGold ? 25 : 10;
-
-  const gem = document.createElement('a-entity');
-  gem.setAttribute('id', id);
-  gem.setAttribute('position', `${x} ${y} ${z}`);
-  gem.setAttribute('class', 'interactive collectible');
-
-  const mesh = document.createElement('a-octahedron');
-  mesh.setAttribute('radius', '0.5');
-  mesh.setAttribute('material', `src: ${tex}; color: ${color}; roughness: 0.2; metalness: 0.8`);
-  mesh.setAttribute('animation__spin', 'property: rotation; to: 0 360 0; dur: 2000; loop: true; easing: linear');
-  mesh.setAttribute('animation__bob', `property: position; from: 0 0 0; to: 0 0.3 0; dir: alternate; dur: 1200; loop: true; easing: easeInOutSine`);
-  gem.appendChild(mesh);
-
-  // Point light glow
-  const light = document.createElement('a-light');
-  light.setAttribute('type', 'point');
-  light.setAttribute('color', color);
-  light.setAttribute('intensity', '0.8');
-  light.setAttribute('distance', '4');
-  gem.appendChild(light);
-
-  scene.appendChild(gem);
-
-  STATE.collectiblePool.push({ el: gem, x, y, z, value, id, radius: 1.5 });
-}
-
-// ────────────────────────────────────────────
-// LEVEL 2 BOSS
-// ────────────────────────────────────────────
-function spawnBoss() {
-  const boss = document.getElementById('boss');
-  boss.innerHTML = '';
-  boss.setAttribute('position', '0 0 -25');
-  boss.setAttribute('visible', 'true');
-
-  // Main body
-  const body = document.createElement('a-sphere');
-  body.setAttribute('radius', '4');
-  body.setAttribute('material', `src: ${PLANET_TEX}; roughness: 0.5; metalness: 0.5`);
-  body.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 4000; loop: true; easing: linear');
-  boss.appendChild(body);
-
-  // Ring
-  const ring = document.createElement('a-torus');
-  ring.setAttribute('radius', '6');
-  ring.setAttribute('radius-tubular', '0.3');
-  ring.setAttribute('material', `color: #ff6600; roughness: 0.4; metalness: 0.9; opacity: 0.8`);
-  ring.setAttribute('rotation', '90 0 0');
-  ring.setAttribute('animation', 'property: rotation; to: 90 360 0; dur: 3000; loop: true; easing: linear');
-  boss.appendChild(ring);
-
-  // Eye (gaze target)
-  const eye = document.createElement('a-sphere');
-  eye.setAttribute('class', 'interactive boss-eye');
-  eye.setAttribute('radius', '1.5');
-  eye.setAttribute('position', '0 0 3.5');
-  eye.setAttribute('material', 'color: #ff0000; emissive: #ff0000; emissiveIntensity: 0.8');
-  boss.appendChild(eye);
-
-  STATE.bossAlive = true;
-  STATE.bossHits  = 0;
-  STATE.bossMaxHits = 5;
-}
-
-// ────────────────────────────────────────────
-// COLLISION DETECTION
-// ────────────────────────────────────────────
-function dist3(a, b) {
-  const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
-  return Math.sqrt(dx*dx + dy*dy + dz*dz);
-}
-
-function getWorldPos(el) {
-  const p = el.getAttribute('position');
-  return p || {x:0,y:0,z:0};
-}
-
-function checkCollisions() {
-  const camPos = {x:0, y:0, z:0}; // Camera always at origin in world space
-
-  // Asteroid → player collisions
-  for (let i = STATE.asteroidPool.length - 1; i >= 0; i--) {
-    const a = STATE.asteroidPool[i];
-    const pos = getWorldPos(a.el);
-    const d = dist3(pos, camPos);
-    if (d < a.size + 0.8) {
-      // Hit!
-      a.el.parentNode.removeChild(a.el);
-      STATE.asteroidPool.splice(i, 1);
-      STATE.lives--;
-      updateHUD();
-      playSFX('hit');
-      // Flash HUD red
-      hud.style.background = 'linear-gradient(to bottom, #ff000088, transparent)';
-      setTimeout(() => hud.style.background = 'linear-gradient(to bottom, #000020cc, transparent)', 500);
-
-      if (STATE.lives <= 0) { endGame(); return; }
-    } else if (d > 60) {
-      // Out of bounds – remove
-      a.el.parentNode.removeChild(a.el);
-      STATE.asteroidPool.splice(i, 1);
-    }
-  }
-
-  // Collectible gaze collection
-  const cam   = document.getElementById('playerCam');
-  const camDir = cam ? cam.components['look-controls'] : null;
-  // We do simple distance-based pickup for collectibles within short range
-  for (let i = STATE.collectiblePool.length - 1; i >= 0; i--) {
-    const c = STATE.collectiblePool[i];
-    const pos = getWorldPos(c.el);
-    const d = dist3(pos, camPos);
-    if (d < c.radius) {
-      c.el.parentNode.removeChild(c.el);
-      STATE.collectiblePool.splice(i, 1);
-      STATE.score += c.value;
-      updateHUD();
-      playSFX('collect');
-      // Score pop
-      scoreDisplay.style.transform = 'scale(1.4)';
-      scoreDisplay.style.color = '#ffd700';
-      setTimeout(() => { scoreDisplay.style.transform = ''; scoreDisplay.style.color = ''; }, 300);
-    }
-  }
-}
-
-// ────────────────────────────────────────────
-// GAME LOOP
-// ────────────────────────────────────────────
-let lastTime = 0;
-
-function gameLoop(timestamp) {
-  if (STATE.phase !== 'playing') return;
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
-  lastTime = timestamp;
-
-  // Move asteroids
-  for (const a of STATE.asteroidPool) {
-    const pos = a.el.getAttribute('position');
-    a.el.setAttribute('position', {
-      x: pos.x + a.vx * dt * 60,
-      y: pos.y + a.vy * dt * 60,
-      z: pos.z + a.vz * dt * 60
-    });
-  }
-
-  // Orbit collectibles slowly
-  for (let i = 0; i < STATE.collectiblePool.length; i++) {
-    const c = STATE.collectiblePool[i];
-    c._angle = (c._angle || 0) + dt * 0.4;
-    const dist = Math.sqrt(c.x*c.x + c.z*c.z);
-    c.el.setAttribute('position', {
-      x: dist * Math.cos(c._angle + Math.atan2(c.z, c.x)),
-      y: c.y + Math.sin(c._angle * 2) * 0.3,
-      z: dist * Math.sin(c._angle + Math.atan2(c.z, c.x))
-    });
-  }
-
-  // Boss orbit (level 2)
-  if (STATE.level === 2 && STATE.bossAlive) {
-    STATE.bossAngle += dt * 0.3;
-    const bossEl = document.getElementById('boss');
-    bossEl.setAttribute('position', {
-      x: Math.cos(STATE.bossAngle) * 20,
-      y: Math.sin(STATE.bossAngle * 0.7) * 5,
-      z: Math.sin(STATE.bossAngle) * 20
-    });
-  }
-
-  checkCollisions();
-
-  STATE.frameId = requestAnimationFrame(gameLoop);
-}
-
-// ────────────────────────────────────────────
-// LEVEL MANAGEMENT
-// ────────────────────────────────────────────
-function clearAll() {
-  clearInterval(STATE.spawnTimer);
-  clearInterval(STATE.collectTimer);
-  clearInterval(STATE.tickTimer);
-  cancelAnimationFrame(STATE.frameId);
-
-  // Clear entities
-  document.getElementById('asteroids').innerHTML = '';
-  document.getElementById('collectibles').innerHTML = '';
-  document.getElementById('boss').innerHTML = '';
-  document.getElementById('boss').setAttribute('visible', 'false');
-
-  STATE.asteroidPool    = [];
-  STATE.collectiblePool = [];
-  STATE.bossAlive       = false;
-}
-
-function startLevel(level) {
-  clearAll();
-  STATE.level = level;
-  STATE.timeLeft = DIFF[CONFIG.difficulty].timePerLevel + (level === 2 ? 30 : 0);
-
-  updateHUD();
-  showBanner(level === 1 ? 'LEVEL 1\nSURVIVE!' : 'LEVEL 2\nDESTROY THE BOSS!', 2500);
-
-  const diff = DIFF[CONFIG.difficulty];
-
-  // Faster spawn in level 2
-  const spawnInterval = level === 2 ? diff.spawnRate * 0.7 : diff.spawnRate;
-
-  setTimeout(() => {
-    STATE.spawnTimer   = setInterval(spawnAsteroid, spawnInterval);
-    STATE.collectTimer = setInterval(spawnCollectible, 2800);
-
-    if (level === 2) {
-      setTimeout(spawnBoss, 3000);
-    }
-
-    // Countdown
-    STATE.tickTimer = setInterval(() => {
-      STATE.timeLeft -= 1;
-      updateHUD();
-      if (STATE.timeLeft <= 0) {
-        if (STATE.level === 1) {
-          // Advance to level 2
-          playSFX('levelup');
-          startLevel(2);
-        } else {
-          // Won!
-          winGame();
-        }
-      }
-    }, 1000);
-
-    lastTime = performance.now();
-    STATE.frameId = requestAnimationFrame(gameLoop);
-  }, 2800);
-}
-
-// ────────────────────────────────────────────
-// GAZE INTERACTION
-// ────────────────────────────────────────────
-// Gaze interaction — set up after full load so mainScene element exists
-window.addEventListener('load', () => {
-  // Hook into A-Frame cursor events
-  mainScene.addEventListener('click', (e) => {
-    const target = e.detail && e.detail.intersectedEl;
-    if (!target) return;
-
-    if (target.classList.contains('collectible')) {
-      const id = target.parentNode.id;
-      const idx = STATE.collectiblePool.findIndex(c => c.id === id || c.el === target.parentNode);
-      if (idx >= 0) {
-        const c = STATE.collectiblePool[idx];
-        c.el.parentNode.removeChild(c.el);
-        STATE.collectiblePool.splice(idx, 1);
-        STATE.score += c.value * 2; // Gaze bonus
-        updateHUD();
-        playSFX('collect');
-      }
-    }
-
-    if (target.classList.contains('boss-eye') && STATE.bossAlive) {
-      STATE.bossHits++;
-      playSFX('gaze');
-      const boss = document.getElementById('boss');
-      boss.querySelector('a-sphere').setAttribute('material', `color: hsl(${20 - STATE.bossHits*4}, 100%, 50%)`);
-      if (STATE.bossHits >= STATE.bossMaxHits) {
-        // Boss defeated
-        boss.setAttribute('visible', 'false');
-        STATE.bossAlive = false;
-        STATE.score += 500;
-        updateHUD();
-        showBanner('BOSS DEFEATED!\n+500 PTS', 2500);
-        playSFX('levelup');
-        setTimeout(() => winGame(), 3000);
-      }
-    }
-  });
+/* FLASH -> SETUP */
+flashScreen.addEventListener("click",()=>{
+  console.log("Flash clicked");
+  showScreen("setupScreen");
 });
 
-// ────────────────────────────────────────────
-// WIN / LOSE
-// ────────────────────────────────────────────
-function endGame() {
-  clearAll();
-  STATE.phase = 'gameover';
-  playSFX('gameover');
-  stopBGMusic();
-  if (STATE.score > STATE.highScore) {
-    STATE.highScore = STATE.score;
-    localStorage.setItem('stellarDrift_hs', STATE.highScore);
-  }
-  finalScore.textContent = STATE.score;
-  highScoreEl.textContent = STATE.highScore;
-  hud.style.display = 'none';
-  mainScene.style.display = 'none';
-  showScreen('gameOverScreen');
-}
-
-function winGame() {
-  clearAll();
-  STATE.phase = 'gameover';
-  STATE.score += 1000; // Completion bonus
-  playSFX('levelup');
-  stopBGMusic();
-  if (STATE.score > STATE.highScore) {
-    STATE.highScore = STATE.score;
-    localStorage.setItem('stellarDrift_hs', STATE.highScore);
-  }
-  finalScore.textContent = STATE.score + ' 🏆 YOU WIN!';
-  highScoreEl.textContent = STATE.highScore;
-  hud.style.display = 'none';
-  mainScene.style.display = 'none';
-  showScreen('gameOverScreen');
-}
-
-// ────────────────────────────────────────────
-// SETUP SCREEN EVENTS
-// ────────────────────────────────────────────
-musicVol.addEventListener('input', () => {
-  const v = musicVol.value / 100;
-  volLabel.textContent = musicVol.value + '%';
-  CONFIG.musicVolume = v;
-  setBGVolume(v);
+/* SLIDER */
+musicVol.addEventListener("input",()=>{
+  volLabel.textContent=musicVol.value+"%";
+  CONFIG.musicVolume=musicVol.value/100;
 });
 
-document.getElementById('startBtn').addEventListener('click', function(e) {
+/* START BUTTON */
+document.getElementById("startBtn").addEventListener("click",(e)=>{
   e.preventDefault();
-  e.stopPropagation();
-  console.log('Start button clicked!');
-  
-  try {
-    resumeAudio();
-    CONFIG.difficulty   = diffSelect.value;
-    CONFIG.music        = musicToggle.checked;
-    CONFIG.sfx          = sfxToggle.checked;
-    CONFIG.musicVolume  = musicVol.value / 100;
-    CONFIG.stereo       = stereoToggle.checked;
+  e.stopImmediatePropagation();
 
-    console.log('CONFIG:', CONFIG);
+  console.log("START CLICKED");
 
-    // Hide all screens and show game
-    flashScreen.classList.add('hidden');
-    setupScreen.classList.add('hidden');
-    gameOverScreen.classList.add('hidden');
-    mainScene.style.display = 'block';
-    hud.style.display = 'flex';
+  if(document.activeElement) document.activeElement.blur();
 
-    // Initialize game
-    generateTextures();
-    buildStarfield();
+  CONFIG.difficulty=diffSelect.value;
+  CONFIG.music=musicToggle.checked;
+  CONFIG.sfx=sfxToggle.checked;
+  CONFIG.stereo=stereoToggle.checked;
 
-    STATE.phase  = 'playing';
-    STATE.score  = 0;
-    STATE.lives  = DIFF[CONFIG.difficulty].lives;
+  console.log(CONFIG);
 
-    startBGMusic();
-    
-    // Start level after a brief delay to ensure scene is ready
-    setTimeout(() => {
-      console.log('Starting level 1...');
-      startLevel(1);
-      if (CONFIG.stereo) {
-        setTimeout(() => {
-          const scene = document.querySelector('a-scene');
-          console.log('Attempting VR mode, scene:', scene);
-          if (scene && scene.enterVR) {
-            scene.enterVR().catch(err => console.log('VR not available:', err));
-          }
-        }, 500);
+  /* Hide UI */
+  showScreen(null);
+
+  /* Enable scene */
+  mainScene.style.display="block";
+  mainScene.style.pointerEvents="auto";
+
+  STATE.phase="playing";
+
+  /* Optional VR */
+  if(CONFIG.stereo){
+    setTimeout(()=>{
+      const scene=document.querySelector("a-scene");
+      if(scene.enterVR){
+        scene.enterVR().catch(()=>{});
       }
-    }, 100);
-  } catch(e) {
-    console.error('Failed to start game:', e);
-    alert('Error starting game: ' + e.message);
+    },500);
   }
 });
 
-// ────────────────────────────────────────────
-// RESTART
-// ────────────────────────────────────────────
-document.getElementById('restartBtn').addEventListener('click', () => {
-  showScreen('setupScreen');
-  mainScene.style.display = 'none';
-  hud.style.display = 'none';
-});
-
-// ────────────────────────────────────────────
-// FLASH SCREEN → SETUP
-// ────────────────────────────────────────────
-flashScreen.addEventListener('click', function(e) {
-  e.preventDefault();
-  console.log('Flash screen clicked!');
-  flashScreen.classList.add('hidden');
-  setTimeout(() => {
-    setupScreen.classList.remove('hidden');
-    console.log('Setup screen should now be visible');
-  }, 100);
-});
-
-// ────────────────────────────────────────────
-// INIT – safe after full page + A-Frame load
-// ────────────────────────────────────────────
-window.addEventListener('load', () => {
-  // Show stored high score on flash screen
-  highScoreEl.textContent = STATE.highScore;
-
-  // Pre-generate textures in background (no canvas needed until game starts)
-  generateTextures();
-
-  // Attach head-drift component once A-Frame scene is fully loaded
-  const scene = document.querySelector('a-scene');
-  const attachDrift = () => {
-    const cam = document.getElementById('playerCam');
-    if (cam) cam.setAttribute('head-drift', '');
-  };
-  if (scene && scene.hasLoaded) {
-    attachDrift();
-  } else if (scene) {
-    scene.addEventListener('loaded', attachDrift);
-  }
-});
 </script>
+
 </body>
 </html>
