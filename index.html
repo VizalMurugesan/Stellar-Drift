@@ -9,10 +9,35 @@
     // Only register component if AFRAME is loaded
     if (typeof AFRAME !== 'undefined') {
       AFRAME.registerComponent('head-drift', {
-      tick() {
-        // Movement now handled in gameLoop
-        return;
-      }
+        tick: function (time, deltaTime) {
+          if (!STATE || STATE.phase !== 'playing') return;
+          const cameraEl = this.el;
+          const rigEl = cameraEl.parentNode;
+          const rotation = cameraEl.getAttribute('rotation');
+          const direction = new THREE.Vector3();
+          cameraEl.object3D.getWorldDirection(direction);
+          direction.multiplyScalar(-1);
+          const rigPos = rigEl.object3D.position;
+          const speed = 0.05;
+          const threshold = 15;
+          if (rotation.x > threshold) {
+            rigPos.addScaledVector(direction, speed);
+          } else if (rotation.x < -threshold) {
+            rigPos.addScaledVector(direction, -speed);
+          }
+          if (Math.abs(rotation.y) > threshold) {
+            const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+            if (rotation.y > threshold) {
+              rigPos.addScaledVector(right, -speed);
+            } else {
+              rigPos.addScaledVector(right, speed);
+            }
+          }
+          rigPos.x = Math.max(-20, Math.min(20, rigPos.x));
+          rigPos.z = Math.max(-50, Math.min(10, rigPos.z));
+          rigEl.setAttribute('position', `${rigPos.x} ${rigPos.y} ${rigPos.z}`);
+          updateHUD();
+        }
       });
     }
   </script>
@@ -264,7 +289,7 @@ function spawnBoss(){const boss=document.getElementById('boss');boss.innerHTML='
 function dist3(a,b){const dx=a.x-b.x,dy=a.y-b.y,dz=a.z-b.z;return Math.sqrt(dx*dx+dy*dy+dz*dz);}
 function checkCollisions(){const rig=document.getElementById('rig');const rigPos=rig.object3D.position;const camPos={x:rigPos.x,y:rigPos.y,z:rigPos.z};for(let i=STATE.asteroidPool.length-1;i>=0;i--){const a=STATE.asteroidPool[i];if(dist3(camPos,a)<2.0){STATE.lives--;console.log('HIT! Lives remaining:',STATE.lives);a.el.parentNode.removeChild(a.el);STATE.asteroidPool.splice(i,1);playSFX('hit');if(STATE.lives<=0)endGame();updateHUD();}}for(let i=STATE.collectiblePool.length-1;i>=0;i--){const c=STATE.collectiblePool[i];if(dist3(camPos,c)<c.radius){STATE.score+=c.value;c.el.parentNode.removeChild(c.el);STATE.collectiblePool.splice(i,1);playSFX('collect');updateHUD();}}} 
 let lastTime=0;
-function gameLoop(timestamp){if(STATE.phase!=='playing')return;const dt=Math.min((timestamp-lastTime)/1000,0.1);lastTime=timestamp;const rig=document.getElementById('rig');const rigPos=rig.object3D.position;const goalPos={x:0,y:0,z:-40};const distToGoal=Math.sqrt(rigPos.x*rigPos.x+(rigPos.y-goalPos.y)*(rigPos.y-goalPos.y)+(rigPos.z-goalPos.z)*(rigPos.z-goalPos.z));const moveSpeed=3;if(keys.w||keys.ArrowUp)rigPos.z-=moveSpeed*dt;if(keys.s||keys.ArrowDown)rigPos.z+=moveSpeed*dt;if(keys.a||keys.ArrowLeft)rigPos.x-=moveSpeed*dt;if(keys.d||keys.ArrowRight)rigPos.x+=moveSpeed*dt;rigPos.x=Math.max(-15,Math.min(15,rigPos.x));rigPos.y=Math.max(-10,Math.min(10,rigPos.y));rigPos.z=Math.max(-2,Math.min(45,rigPos.z));if(distToGoal<6){console.log('REACHED GOAL! Advancing to next level');playSFX('levelup');STATE.phase='gameover';setTimeout(()=>{STATE.score+=500;STATE.lives=DIFF['easy'].lives;STATE.phase='playing';updateHUD();startLevel(STATE.level+1);},1500);}for(const a of STATE.asteroidPool){a.x+=a.vx*dt*10;a.y+=a.vy*dt*10;a.z+=a.vz*dt*10;a.el.setAttribute('position',`${a.x} ${a.y} ${a.z}`);}for(let i=0;i<STATE.collectiblePool.length;i++){const c=STATE.collectiblePool[i];c.x=8*Math.cos(STATE.timeLeft*0.5+i);c.z=-40+8*Math.sin(STATE.timeLeft*0.5+i);c.el.setAttribute('position',`${c.x} ${c.y} ${c.z}`);}if(STATE.level===2&&STATE.bossAlive){STATE.bossAngle+=0.01;const bossEl=document.getElementById('boss');bossEl.setAttribute('position',`${15*Math.cos(STATE.bossAngle)} 0 ${-40+15*Math.sin(STATE.bossAngle)}`);}checkCollisions();STATE.frameId=requestAnimationFrame(gameLoop);}
+function gameLoop(timestamp){if(STATE.phase!=='playing')return;const dt=Math.min((timestamp-lastTime)/1000,0.1);lastTime=timestamp;const rig=document.getElementById('rig');const rigPos=rig.object3D.position;const goalPos={x:0,y:0,z:-40};const distToGoal=Math.sqrt(rigPos.x*rigPos.x+(rigPos.y-goalPos.y)*(rigPos.y-goalPos.y)+(rigPos.z-goalPos.z)*(rigPos.z-goalPos.z));if(distToGoal<6){console.log('REACHED GOAL! Advancing to next level');playSFX('levelup');STATE.phase='gameover';setTimeout(()=>{STATE.score+=500;STATE.lives=DIFF['easy'].lives;STATE.phase='playing';updateHUD();startLevel(STATE.level+1);},1500);}for(const a of STATE.asteroidPool){a.x+=a.vx*dt*10;a.y+=a.vy*dt*10;a.z+=a.vz*dt*10;a.el.setAttribute('position',`${a.x} ${a.y} ${a.z}`);}for(let i=0;i<STATE.collectiblePool.length;i++){const c=STATE.collectiblePool[i];c.x=8*Math.cos(STATE.timeLeft*0.5+i);c.z=-40+8*Math.sin(STATE.timeLeft*0.5+i);c.el.setAttribute('position',`${c.x} ${c.y} ${c.z}`);}if(STATE.level===2&&STATE.bossAlive){STATE.bossAngle+=0.01;const bossEl=document.getElementById('boss');bossEl.setAttribute('position',`${15*Math.cos(STATE.bossAngle)} 0 ${-40+15*Math.sin(STATE.bossAngle)}`);}checkCollisions();STATE.frameId=requestAnimationFrame(gameLoop);}
 function clearAll(){clearInterval(STATE.spawnTimer);clearInterval(STATE.collectTimer);clearInterval(STATE.tickTimer);cancelAnimationFrame(STATE.frameId);document.getElementById('asteroids').innerHTML='';document.getElementById('collectibles').innerHTML='';document.getElementById('boss').innerHTML='';document.getElementById('boss').setAttribute('visible','false');STATE.asteroidPool=[];STATE.collectiblePool=[];STATE.bossAlive=false;}
 function startLevel(level){clearAll();STATE.level=level;STATE.timeLeft=DIFF[CONFIG.difficulty].timePerLevel+(level===2?30:0);updateHUD();showBanner(level===1?'LEVEL 1\nREACH THE PLANET':'LEVEL 2\nFINAL PLANET!',2500);const diff=DIFF[CONFIG.difficulty];const spawnInterval=level===2?diff.spawnRate*0.7:diff.spawnRate;setTimeout(()=>{if(level===2)spawnBoss();STATE.spawnTimer=setInterval(spawnAsteroid,spawnInterval);STATE.collectTimer=setInterval(spawnCollectible,3000);STATE.frameId=requestAnimationFrame(gameLoop);},2800);}
 function endGame(){clearAll();STATE.phase='gameover';playSFX('gameover');stopBGMusic();if(STATE.score>STATE.highScore){STATE.highScore=STATE.score;localStorage.setItem('stellarDrift_hs',STATE.highScore);}finalScore.textContent=STATE.score;highScoreEl.textContent=STATE.highScore;hud.style.display='none';mainScene.classList.remove('visible');flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.remove('hidden');}
