@@ -3,181 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stellar Drift – Fixed</title>
+<title>VR Space Survival</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#000010;color:white;font-family:monospace;overflow:hidden}
+body { margin:0; overflow:hidden; font-family:monospace; background:black; }
 
-/* Screens */
-.screen{
+/* UI */
+#ui {
   position:fixed;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  background:#000020;
-  z-index:1000;
-}
-.screen.hidden{
-  opacity:0;
-  pointer-events:none;
-  visibility:hidden;
+  top:10px;
+  left:10px;
+  color:#00f5ff;
+  z-index:10;
 }
 
-/* Prevent overlay blocking */
-.screen::before{pointer-events:none;}
-
-#setupScreen{z-index:10001;}
-
-/* Inputs always clickable */
-select,input,button{
-  pointer-events:auto!important;
-  z-index:10002;
-  position:relative;
-}
-
-/* A-Frame fix */
-a-scene{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-}
-
-.btn{
+button {
   padding:10px 20px;
-  margin-top:20px;
   background:#7b2fff;
-  border:none;
   color:white;
+  border:none;
   cursor:pointer;
 }
-
 </style>
 </head>
 
 <body>
 
-<!-- FLASH -->
-<div id="flashScreen" class="screen">
-  <h1>STELLAR DRIFT</h1>
-  <p>Tap to continue</p>
+<div id="ui">
+  <div>Score: <span id="score">0</span></div>
+  <button id="startBtn">Start Game</button>
 </div>
 
-<!-- SETUP -->
-<div id="setupScreen" class="screen hidden">
-  <h2>SETUP</h2>
+<a-scene id="scene" style="display:none">
 
-  <select id="diffSelect">
-    <option value="easy">Easy</option>
-    <option value="normal" selected>Normal</option>
-    <option value="hard">Hard</option>
-  </select>
+  <!-- Camera -->
+  <a-entity id="rig">
+    <a-camera id="cam" position="0 1.6 0">
+      <!-- Gaze cursor -->
+      <a-entity cursor="fuse:true; fuseTimeout:1000"
+                position="0 0 -1"
+                geometry="primitive:ring; radiusInner:0.01; radiusOuter:0.02"
+                material="color:#00f5ff">
+      </a-entity>
+    </a-camera>
+  </a-entity>
 
-  <br><br>
+  <!-- Lights -->
+  <a-light type="ambient" intensity="1"></a-light>
 
-  <input type="range" id="musicVol" min="0" max="100" value="60">
-  <span id="volLabel">60%</span>
+  <!-- Space background -->
+  <a-sky color="#000011"></a-sky>
 
-  <br><br>
+  <!-- Containers -->
+  <a-entity id="asteroids"></a-entity>
 
-  <label>Music <input type="checkbox" id="musicToggle" checked></label>
-  <br>
-  <label>SFX <input type="checkbox" id="sfxToggle" checked></label>
-  <br>
-  <label>VR <input type="checkbox" id="stereoToggle" checked></label>
-
-  <button class="btn" id="startBtn">LAUNCH GAME</button>
-</div>
-
-<!-- GAME -->
-<a-scene id="mainScene" style="display:none">
-  <a-entity camera look-controls></a-entity>
 </a-scene>
 
 <script>
-/* CONFIG */
-const CONFIG = {
-  difficulty:"normal",
-  music:true,
-  sfx:true,
-  musicVolume:0.6,
-  stereo:true
+let score = 0;
+let playing = false;
+let asteroids = [];
+
+const scoreEl = document.getElementById("score");
+const scene = document.getElementById("scene");
+
+/* START GAME */
+document.getElementById("startBtn").onclick = () => {
+  document.getElementById("ui").style.display = "none";
+  scene.style.display = "block";
+  scene.style.pointerEvents = "auto";
+  playing = true;
+
+  spawnLoop();
+  gameLoop();
 };
 
-const STATE = {phase:"flash"};
+/* SPAWN ASTEROIDS */
+function spawnAsteroid() {
+  const container = document.getElementById("asteroids");
 
-/* DOM */
-const flashScreen=document.getElementById("flashScreen");
-const setupScreen=document.getElementById("setupScreen");
-const mainScene=document.getElementById("mainScene");
+  const a = document.createElement("a-sphere");
+  const dist = 20;
 
-const diffSelect=document.getElementById("diffSelect");
-const musicVol=document.getElementById("musicVol");
-const volLabel=document.getElementById("volLabel");
-const musicToggle=document.getElementById("musicToggle");
-const sfxToggle=document.getElementById("sfxToggle");
-const stereoToggle=document.getElementById("stereoToggle");
+  const x = (Math.random()-0.5)*20;
+  const y = (Math.random()-0.5)*10;
+  const z = -dist;
 
-/* SCREEN CONTROL */
-function showScreen(id){
-  [flashScreen,setupScreen].forEach(s=>{
-    if(id && s.id===id) s.classList.remove("hidden");
-    else s.classList.add("hidden");
+  a.setAttribute("position", `${x} ${y} ${z}`);
+  a.setAttribute("radius", Math.random()*1 + 0.5);
+  a.setAttribute("color", "#888");
+
+  container.appendChild(a);
+
+  asteroids.push({
+    el: a,
+    x, y, z,
+    speed: 0.05 + Math.random()*0.05
   });
 }
 
-/* FLASH -> SETUP */
-flashScreen.addEventListener("click",()=>{
-  console.log("Flash clicked");
-  showScreen("setupScreen");
-});
+function spawnLoop() {
+  if (!playing) return;
+  spawnAsteroid();
+  setTimeout(spawnLoop, 1000);
+}
 
-/* SLIDER */
-musicVol.addEventListener("input",()=>{
-  volLabel.textContent=musicVol.value+"%";
-  CONFIG.musicVolume=musicVol.value/100;
-});
+/* GAME LOOP */
+function gameLoop() {
+  if (!playing) return;
 
-/* START BUTTON */
-document.getElementById("startBtn").addEventListener("click",(e)=>{
-  e.preventDefault();
-  e.stopImmediatePropagation();
+  for (let i = asteroids.length-1; i >= 0; i--) {
+    let a = asteroids[i];
 
-  console.log("START CLICKED");
+    a.z += a.speed * 5;
+    a.el.setAttribute("position", `${a.x} ${a.y} ${a.z}`);
 
-  if(document.activeElement) document.activeElement.blur();
+    // collision with player
+    if (a.z > -1) {
+      alert("Game Over! Score: " + score);
+      location.reload();
+      return;
+    }
 
-  CONFIG.difficulty=diffSelect.value;
-  CONFIG.music=musicToggle.checked;
-  CONFIG.sfx=sfxToggle.checked;
-  CONFIG.stereo=stereoToggle.checked;
-
-  console.log(CONFIG);
-
-  /* Hide UI */
-  showScreen(null);
-
-  /* Enable scene */
-  mainScene.style.display="block";
-  mainScene.style.pointerEvents="auto";
-
-  STATE.phase="playing";
-
-  /* Optional VR */
-  if(CONFIG.stereo){
-    setTimeout(()=>{
-      const scene=document.querySelector("a-scene");
-      if(scene.enterVR){
-        scene.enterVR().catch(()=>{});
-      }
-    },500);
+    // passed safely → score
+    if (a.z > -5 && !a.passed) {
+      a.passed = true;
+      score++;
+      scoreEl.textContent = score;
+    }
   }
-});
 
+  requestAnimationFrame(gameLoop);
+}
 </script>
 
 </body>
