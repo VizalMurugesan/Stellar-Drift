@@ -261,10 +261,8 @@
   <div class="logo">STELLAR DRIFT</div>
   <div class="subtitle">VR Space Survival</div>
   <div class="credits">
-    <strong>CMPT 461 – Immersive Computing</strong><br>
-    Individual Project<br>
-    Built with A-Frame 1.5<br><br>
-    &copy; 2026 &nbsp;|&nbsp; Simon Fraser University
+    Built with A-Frame 1.5<br>
+    Web Audio API &amp; Canvas Textures
   </div>
   <div class="start-hint">TAP ANYWHERE TO CONTINUE</div>
 </div>
@@ -1136,40 +1134,44 @@ musicVol.addEventListener('input', () => {
 });
 
 document.getElementById('startBtn').addEventListener('click', () => {
-  resumeAudio();
-  CONFIG.difficulty   = diffSelect.value;
-  CONFIG.music        = musicToggle.checked;
-  CONFIG.sfx          = sfxToggle.checked;
-  CONFIG.musicVolume  = musicVol.value / 100;
+  try {
+    resumeAudio();
+    CONFIG.difficulty   = diffSelect.value;
+    CONFIG.music        = musicToggle.checked;
+    CONFIG.sfx          = sfxToggle.checked;
+    CONFIG.musicVolume  = musicVol.value / 100;
+    CONFIG.stereo       = stereoToggle.checked;
 
-  if (CONFIG.stereo !== stereoToggle.checked) {
-    CONFIG.stereo = stereoToggle.checked;
-  }
+    // Hide all screens and show game
+    flashScreen.classList.add('hidden');
+    setupScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    mainScene.style.display = 'block';
+    hud.style.display = 'flex';
 
-  showScreen(null);  // hide all
-  flashScreen.classList.add('hidden');
-  setupScreen.classList.add('hidden');
-  gameOverScreen.classList.add('hidden');
-  mainScene.style.display = '';
-  hud.style.display = 'flex';
+    // Initialize game
+    generateTextures();
+    buildStarfield();
 
-  if (CONFIG.stereo) {
-    // Enter VR
+    STATE.phase  = 'playing';
+    STATE.score  = 0;
+    STATE.lives  = DIFF[CONFIG.difficulty].lives;
+
+    startBGMusic();
+    
+    // Start level after a brief delay to ensure scene is ready
     setTimeout(() => {
-      const scene = document.querySelector('a-scene');
-      if (scene && scene.enterVR) scene.enterVR();
-    }, 500);
+      startLevel(1);
+      if (CONFIG.stereo) {
+        setTimeout(() => {
+          const scene = document.querySelector('a-scene');
+          if (scene && scene.enterVR) scene.enterVR();
+        }, 500);
+      }
+    }, 100);
+  } catch(e) {
+    console.error('Failed to start game:', e);
   }
-
-  generateTextures();
-  buildStarfield();
-
-  STATE.phase  = 'playing';
-  STATE.score  = 0;
-  STATE.lives  = DIFF[CONFIG.difficulty].lives;
-
-  startBGMusic();
-  startLevel(1);
 });
 
 // ────────────────────────────────────────────
