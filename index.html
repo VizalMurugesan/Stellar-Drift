@@ -57,7 +57,8 @@
       background: radial-gradient(ellipse at center, #0a0a2e 0%, #000005 70%);
       transition: opacity 0.8s ease;
     }
-    .screen.hidden { opacity: 0; pointer-events: none; }
+    .screen.hidden { opacity: 0; pointer-events: none; display: none; }
+    .screen { pointer-events: auto; }
 
     /* Stars behind UI */
     .screen::before {
@@ -1133,7 +1134,11 @@ musicVol.addEventListener('input', () => {
   setBGVolume(v);
 });
 
-document.getElementById('startBtn').addEventListener('click', () => {
+document.getElementById('startBtn').addEventListener('click', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log('Start button clicked!');
+  
   try {
     resumeAudio();
     CONFIG.difficulty   = diffSelect.value;
@@ -1141,6 +1146,8 @@ document.getElementById('startBtn').addEventListener('click', () => {
     CONFIG.sfx          = sfxToggle.checked;
     CONFIG.musicVolume  = musicVol.value / 100;
     CONFIG.stereo       = stereoToggle.checked;
+
+    console.log('CONFIG:', CONFIG);
 
     // Hide all screens and show game
     flashScreen.classList.add('hidden');
@@ -1161,16 +1168,21 @@ document.getElementById('startBtn').addEventListener('click', () => {
     
     // Start level after a brief delay to ensure scene is ready
     setTimeout(() => {
+      console.log('Starting level 1...');
       startLevel(1);
       if (CONFIG.stereo) {
         setTimeout(() => {
           const scene = document.querySelector('a-scene');
-          if (scene && scene.enterVR) scene.enterVR();
+          console.log('Attempting VR mode, scene:', scene);
+          if (scene && scene.enterVR) {
+            scene.enterVR().catch(err => console.log('VR not available:', err));
+          }
         }, 500);
       }
     }, 100);
   } catch(e) {
     console.error('Failed to start game:', e);
+    alert('Error starting game: ' + e.message);
   }
 });
 
@@ -1186,9 +1198,14 @@ document.getElementById('restartBtn').addEventListener('click', () => {
 // ────────────────────────────────────────────
 // FLASH SCREEN → SETUP
 // ────────────────────────────────────────────
-flashScreen.addEventListener('click', () => {
+flashScreen.addEventListener('click', function(e) {
+  e.preventDefault();
+  console.log('Flash screen clicked!');
   flashScreen.classList.add('hidden');
-  setTimeout(() => setupScreen.classList.remove('hidden'), 100);
+  setTimeout(() => {
+    setupScreen.classList.remove('hidden');
+    console.log('Setup screen should now be visible');
+  }, 100);
 });
 
 // ────────────────────────────────────────────
