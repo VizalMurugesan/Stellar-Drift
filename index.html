@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Stellar Drift – VR Space Game</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js"></script>
   <script>
-    AFRAME.registerComponent('head-drift', {
+    // Only register component if AFRAME is loaded
+    if (typeof AFRAME !== 'undefined') {
+      AFRAME.registerComponent('head-drift', {
       tick() {
         const camera = this.el;
         if (!camera) return;
@@ -33,7 +35,8 @@
           rig.setAttribute('position', pos);
         }
       }
-    });
+      });
+    }
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -283,9 +286,9 @@ function startLevel(level){clearAll();STATE.level=level;STATE.timeLeft=DIFF[CONF
 function endGame(){clearAll();STATE.phase='gameover';playSFX('gameover');stopBGMusic();if(STATE.score>STATE.highScore){STATE.highScore=STATE.score;localStorage.setItem('stellarDrift_hs',STATE.highScore);}finalScore.textContent=STATE.score;highScoreEl.textContent=STATE.highScore;hud.style.display='none';mainScene.classList.remove('visible');flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.remove('hidden');}
 function winGame(){clearAll();STATE.phase='gameover';STATE.score+=1000;playSFX('levelup');stopBGMusic();if(STATE.score>STATE.highScore){STATE.highScore=STATE.score;localStorage.setItem('stellarDrift_hs',STATE.highScore);}finalScore.textContent=STATE.score+' 🏆 YOU WIN!';highScoreEl.textContent=STATE.highScore;hud.style.display='none';mainScene.classList.remove('visible');flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.remove('hidden');}
 musicVol.addEventListener('input',()=>{const v=musicVol.value/100;volLabel.textContent=musicVol.value+'%';CONFIG.musicVolume=v;setBGVolume(v);});
-document.getElementById('startBtn').addEventListener('click',function(e){console.log('LAUNCH GAME clicked');e.preventDefault();e.stopPropagation();resumeAudio();CONFIG.difficulty=diffSelect.value;CONFIG.music=musicToggle.checked;CONFIG.sfx=sfxToggle.checked;CONFIG.musicVolume=musicVol.value/100;CONFIG.stereo=stereoToggle.checked;flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.add('hidden');const scene=document.querySelector('a-scene');hud.style.display='flex';scene.resize();console.log('Scene resized, starting game');generateTextures();buildStarfield();STATE.phase='playing';STATE.score=0;STATE.lives=DIFF[CONFIG.difficulty].lives;startBGMusic();console.log('Background music started');startLevel(1);if(CONFIG.stereo){setTimeout(()=>{if(scene&&scene.enterVR)scene.enterVR().catch(err=>console.log('VR unavailable'));},500);}});
+document.getElementById('startBtn').addEventListener('click',function(e){console.log('LAUNCH GAME clicked');e.preventDefault();e.stopPropagation();resumeAudio();CONFIG.difficulty=diffSelect.value;CONFIG.music=musicToggle.checked;CONFIG.sfx=sfxToggle.checked;CONFIG.musicVolume=musicVol.value/100;CONFIG.stereo=stereoToggle.checked;flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.add('hidden');const scene=document.querySelector('a-scene');hud.style.display='flex';console.log('Starting game...');generateTextures();buildStarfield();STATE.phase='playing';STATE.score=0;STATE.lives=DIFF[CONFIG.difficulty].lives;startBGMusic();console.log('Background music started, lives:',STATE.lives);startLevel(1);if(CONFIG.stereo){setTimeout(()=>{if(scene&&scene.enterVR)scene.enterVR().catch(err=>console.log('VR unavailable'));},500);}});
 document.getElementById('restartBtn').addEventListener('click',()=>{flashScreen.classList.remove('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.add('hidden');mainScene.classList.remove('visible');hud.style.display='none';STATE.phase='flash';});
-flashScreen.addEventListener('click',function(e){e.preventDefault();flashScreen.classList.add('hidden');setTimeout(()=>{setupScreen.classList.remove('hidden');console.log('Setup screen shown');},100);});
+flashScreen.addEventListener('click',function(e){e.preventDefault();flashScreen.classList.add('hidden');setTimeout(()=>{console.log('Showing setup screen');setupScreen.classList.remove('hidden');},100);});
 window.addEventListener('load',()=>{console.log('Page loaded, flashScreen should be visible');highScoreEl.textContent=STATE.highScore;mainScene.addEventListener('click',(e)=>{const target=e.detail&&e.detail.intersectedEl;if(!target)return;if(target.classList.contains('collectible')){const id=target.parentNode.id;const idx=STATE.collectiblePool.findIndex(c=>c.id===id||c.el===target.parentNode);if(idx>=0){const c=STATE.collectiblePool[idx];c.el.parentNode.removeChild(c.el);STATE.collectiblePool.splice(idx,1);STATE.score+=c.value*2;updateHUD();playSFX('collect');}}if(target.classList.contains('boss-eye')&&STATE.bossAlive){STATE.bossHits++;playSFX('gaze');const boss=document.getElementById('boss');boss.querySelector('a-sphere').setAttribute('material',`color: hsl(${20-STATE.bossHits*4}, 100%, 50%)`);if(STATE.bossHits>=STATE.bossMaxHits){boss.setAttribute('visible','false');STATE.bossAlive=false;STATE.score+=500;updateHUD();showBanner('BOSS DEFEATED!\n+500 PTS',2500);playSFX('levelup');setTimeout(()=>winGame(),3000);}}});const scene=document.querySelector('a-scene');const attachDrift=()=>{const cam=document.getElementById('playerCam');if(cam)cam.setAttribute('head-drift','');};if(scene&&scene.hasLoaded)attachDrift();else if(scene)scene.addEventListener('loaded',attachDrift);});
 </script>
 </body>
