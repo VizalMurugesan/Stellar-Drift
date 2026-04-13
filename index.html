@@ -8,38 +8,24 @@
   <script>
     AFRAME.registerComponent('head-drift', {
       tick() {
-        if (STATE && STATE.phase !== 'playing') return;
+        if (!window.STATE || STATE.phase !== 'playing') return;
         const camera = this.el;
-        if (!camera) return;
-        const rotation = camera.getAttribute('rotation');
         const rig = camera.parentNode;
-        if (!rig) return;
-        const pitchThreshold = 15;
-        if (rotation.x > pitchThreshold) {
-          let pos = rig.getAttribute('position');
-          pos.z -= 0.05;
-          rig.setAttribute('position', pos);
-        } else if (rotation.x < -pitchThreshold) {
-          let pos = rig.getAttribute('position');
-          pos.z += 0.05;
-          rig.setAttribute('position', pos);
-        }
-        if (rotation.y > pitchThreshold) {
-          let pos = rig.getAttribute('position');
-          pos.x -= 0.05;
-          rig.setAttribute('position', pos);
-        } else if (rotation.y < -pitchThreshold) {
-          let pos = rig.getAttribute('position');
-          pos.x += 0.05;
-          rig.setAttribute('position', pos);
-        }
+        if (!camera || !rig) return;
+        const rot = camera.object3D.rotation;
+        const rigPos = rig.object3D.position;
+        const threshold = 0.25;
+        if (rot.x > threshold) rigPos.z -= 0.05;
+        else if (rot.x < -threshold) rigPos.z += 0.05;
+        if (rot.y > threshold) rigPos.x -= 0.05;
+        else if (rot.y < -threshold) rigPos.x += 0.05;
       }
     });
   </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #000010; color: #fff; overflow: hidden; }
-    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; background: radial-gradient(ellipse at center, #0a0a2e 0%, #000005 70%); transition: opacity 0.8s ease; }
+    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; background: #000005; transition: opacity 0.5s ease; }
     .screen.hidden { opacity: 0; pointer-events: none; display: none; }
     .screen { pointer-events: auto; }
     .screen::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 10% 15%, #fff 0%, transparent 100%), radial-gradient(1px 1px at 25% 40%, #aaf 0%, transparent 100%), radial-gradient(1px 1px at 50% 5%, #fff 0%, transparent 100%), radial-gradient(1px 1px at 70% 60%, #ffa 0%, transparent 100%), radial-gradient(1px 1px at 85% 25%, #fff 0%, transparent 100%), radial-gradient(1px 1px at 35% 80%, #aff 0%, transparent 100%), radial-gradient(1px 1px at 60% 90%, #fff 0%, transparent 100%), radial-gradient(1px 1px at 90% 75%, #faf 0%, transparent 100%), radial-gradient(2px 2px at 15% 55%, #fff 0%, transparent 100%), radial-gradient(2px 2px at 80% 10%, #aaf 0%, transparent 100%); animation: twinkle 4s infinite alternate; z-index: -1; }
@@ -65,10 +51,9 @@
     .btn { margin-top: 2rem; padding: .9rem 2.8rem; font-family: inherit; font-size: 1.1rem; letter-spacing: .2em; text-transform: uppercase; background: linear-gradient(135deg, #7b2fff, #00f5ff); color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: filter .2s, transform .1s; pointer-events: auto; z-index: 10000; }
     .btn:hover { filter: brightness(1.3); transform: scale(1.03); }
     .btn:active { transform: scale(.97); }
-    #hud { position: fixed; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.2rem; z-index: 500; background: linear-gradient(to bottom, #000020cc, transparent); pointer-events: none; }
+    #hud { position: fixed; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.2rem; z-index: 50; background: linear-gradient(to bottom, #000020cc, transparent); pointer-events: none; }
     #hud .hud-item { font-size: clamp(.7rem, 2.5vw, .95rem); letter-spacing: .12em; color: #00f5ff; text-shadow: 0 0 8px #00f5ff88; }
-    #mainScene { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 1; }
-    .screen { z-index: 100; }
+    #mainScene { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
     .screen.hidden { display: none !important; }
     #levelBanner { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 800; pointer-events: none; opacity: 0; transition: opacity .5s; }
     #levelBanner.show { opacity: 1; }
@@ -143,7 +128,7 @@
   <a-entity id="collectibles"></a-entity>
   <a-entity id="asteroids"></a-entity>
   <a-entity id="boss" visible="false"></a-entity>
-  <a-box position="0 0 -5" width="2" height="2" depth="2" material="color: #ff0000; emissive: #ff0000; emissiveIntensity: 0.8"></a-box>
+  <a-box position="0 1.6 -3" width="2" height="2" depth="2" material="color: #ff0000; emissive: #ff0000; emissiveIntensity: 0.8"></a-box>
   <a-light type="ambient" color="#ffffff" intensity="1.2"></a-light>
   <a-light type="directional" color="#aaddff" intensity="1.5" position="5 8 -5"></a-light>
   <a-light type="point" color="#00f5ff" intensity="0.8" position="0 0 -15"></a-light>
@@ -186,7 +171,7 @@ function startLevel(level){clearAll();STATE.level=level;STATE.timeLeft=DIFF[CONF
 function endGame(){clearAll();STATE.phase='gameover';playSFX('gameover');stopBGMusic();if(STATE.score>STATE.highScore){STATE.highScore=STATE.score;localStorage.setItem('stellarDrift_hs',STATE.highScore);}finalScore.textContent=STATE.score;highScoreEl.textContent=STATE.highScore;hud.style.display='none';flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.remove('hidden');}
 function winGame(){clearAll();STATE.phase='gameover';STATE.score+=1000;playSFX('levelup');stopBGMusic();if(STATE.score>STATE.highScore){STATE.highScore=STATE.score;localStorage.setItem('stellarDrift_hs',STATE.highScore);}finalScore.textContent=STATE.score+' 🏆 YOU WIN!';highScoreEl.textContent=STATE.highScore;hud.style.display='none';flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.remove('hidden');}
 musicVol.addEventListener('input',()=>{const v=musicVol.value/100;volLabel.textContent=musicVol.value+'%';CONFIG.musicVolume=v;setBGVolume(v);});
-document.getElementById('startBtn').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();resumeAudio();CONFIG.difficulty=diffSelect.value;CONFIG.music=musicToggle.checked;CONFIG.sfx=sfxToggle.checked;CONFIG.musicVolume=musicVol.value/100;CONFIG.stereo=stereoToggle.checked;flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.add('hidden');const scene=document.querySelector('a-scene');mainScene.style.opacity='1';if(scene.canvas)scene.canvas.style.display='block';hud.style.display='flex';scene.resize();generateTextures();buildStarfield();STATE.phase='playing';STATE.score=0;STATE.lives=DIFF[CONFIG.difficulty].lives;startBGMusic();startLevel(1);if(CONFIG.stereo){setTimeout(()=>{if(scene&&scene.enterVR)scene.enterVR().catch(err=>console.log('VR unavailable'));},500);}});
+document.getElementById('startBtn').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();resumeAudio();CONFIG.difficulty=diffSelect.value;CONFIG.music=musicToggle.checked;CONFIG.sfx=sfxToggle.checked;CONFIG.musicVolume=musicVol.value/100;CONFIG.stereo=stereoToggle.checked;flashScreen.classList.add('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.add('hidden');const scene=document.querySelector('a-scene');scene.resize();if(scene.canvas){scene.canvas.style.opacity='1';scene.canvas.style.display='block';}document.getElementById('rig').setAttribute('position','0 0 0');hud.style.display='flex';generateTextures();buildStarfield();STATE.phase='playing';STATE.score=0;STATE.lives=DIFF[CONFIG.difficulty].lives;startBGMusic();startLevel(1);if(CONFIG.stereo){setTimeout(()=>{if(scene&&scene.enterVR)scene.enterVR().catch(err=>console.log('VR unavailable'));},500);}});
 document.getElementById('restartBtn').addEventListener('click',()=>{flashScreen.classList.remove('hidden');setupScreen.classList.add('hidden');gameOverScreen.classList.add('hidden');hud.style.display='none';STATE.phase='flash';});
 flashScreen.addEventListener('click',function(e){e.preventDefault();flashScreen.classList.add('hidden');setTimeout(()=>setupScreen.classList.remove('hidden'),100);});
 window.addEventListener('load',()=>{highScoreEl.textContent=STATE.highScore;mainScene.addEventListener('click',(e)=>{const target=e.detail&&e.detail.intersectedEl;if(!target)return;if(target.classList.contains('collectible')){const id=target.parentNode.id;const idx=STATE.collectiblePool.findIndex(c=>c.id===id||c.el===target.parentNode);if(idx>=0){const c=STATE.collectiblePool[idx];c.el.parentNode.removeChild(c.el);STATE.collectiblePool.splice(idx,1);STATE.score+=c.value*2;updateHUD();playSFX('collect');}}if(target.classList.contains('boss-eye')&&STATE.bossAlive){STATE.bossHits++;playSFX('gaze');const boss=document.getElementById('boss');boss.querySelector('a-sphere').setAttribute('material',`color: hsl(${20-STATE.bossHits*4}, 100%, 50%)`);if(STATE.bossHits>=STATE.bossMaxHits){boss.setAttribute('visible','false');STATE.bossAlive=false;STATE.score+=500;updateHUD();showBanner('BOSS DEFEATED!\n+500 PTS',2500);playSFX('levelup');setTimeout(()=>winGame(),3000);}}});const scene=document.querySelector('a-scene');const attachDrift=()=>{const cam=document.getElementById('playerCam');if(cam)cam.setAttribute('head-drift','');};if(scene&&scene.hasLoaded)attachDrift();else if(scene)scene.addEventListener('loaded',attachDrift);});
