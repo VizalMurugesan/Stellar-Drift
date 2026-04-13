@@ -9,20 +9,45 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
   <style>
-    body { margin: 0; }
+    body { 
+      margin: 0; 
+      padding: 0;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
 
     /* Mobile UI button */
     #startBtn {
       position: fixed;
-      top: 40%;
+      top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      padding: 15px 25px;
-      font-size: 18px;
-      background: white;
-      border: none;
+      padding: 20px 40px;
+      font-size: 24px;
+      font-weight: bold;
+      background: #00f5ff;
+      color: #000;
+      border: 3px solid #7b2fff;
       border-radius: 10px;
-      z-index: 999;
+      z-index: 9999;
+      cursor: pointer;
+      pointer-events: auto;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    #startBtn:active {
+      transform: translate(-50%, -50%) scale(0.95);
+      opacity: 0.8;
+    }
+
+    #startBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   </style>
 </head>
@@ -67,31 +92,43 @@ const startBtn = document.querySelector("#startBtn");
 
 let started = false;
 
-// Tap to start (REQUIRED for mobile)
-startBtn.addEventListener("click", () => {
+// Mobile-friendly touch and click events
+function handleStart(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log('Start button touched/clicked');
+  
   startBtn.style.display = "none";
   started = true;
-});
+}
+
+// Support both touch and click
+startBtn.addEventListener("click", handleStart, { passive: false });
+startBtn.addEventListener("touchstart", handleStart, { passive: false });
 
 // Simple forward movement (tap anywhere to move)
-document.body.addEventListener("touchstart", () => {
+document.body.addEventListener("touchstart", (e) => {
   if (!started) return;
 
   let pos = player.getAttribute("position");
   pos.z -= 1;
   player.setAttribute("position", pos);
-});
+}, { passive: false });
 
 // Enemy movement
 function animateEnemy() {
   let z = -10;
-  setInterval(() => {
+  const interval = setInterval(() => {
     z += 0.05;
     enemy.setAttribute("position", `0 1 ${z}`);
+    
+    // Reset if too far
+    if (z > 5) z = -10;
   }, 50);
 }
 
 window.addEventListener("load", () => {
+  console.log('Page loaded, starting animation');
   animateEnemy();
 });
 </script>
