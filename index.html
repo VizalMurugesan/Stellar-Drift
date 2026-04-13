@@ -19,8 +19,8 @@
         // Get the direction the camera is looking
         const direction = new THREE.Vector3(0, 0, -1);
         direction.applyQuaternion(camera.object3D.quaternion);
-        // Move in that direction at constant speed
-        const moveSpeed = 0.12;
+        // Move in that direction at constant speed - MUCH FASTER
+        const moveSpeed = 0.5;
         pos.x += direction.x * moveSpeed;
         pos.y += direction.y * moveSpeed;
         pos.z += direction.z * moveSpeed;
@@ -28,6 +28,7 @@
         pos.x = Math.max(-15, Math.min(15, pos.x));
         pos.y = Math.max(-10, Math.min(10, pos.y));
         pos.z = Math.max(-2, Math.min(45, pos.z));
+        console.log('Gaze-based movement - pos:', pos.x.toFixed(1), pos.y.toFixed(1), pos.z.toFixed(1));
       }
       });
     }
